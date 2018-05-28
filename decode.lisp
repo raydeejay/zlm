@@ -91,7 +91,7 @@ means ‘no operand’; it is an error if a %11 bit pair occurs before a
 non-%11 pair."
   (let* ((byte (byte-at ptr))
          (opcode (logand #b00011111 byte))
-         (typespec (varargs-typespec (1+ ptr))))
+         (typespec (varargs-typespec (byte-at (1+ ptr)))))
     `(,byte ,@(decode-operands (+ 2 ptr) typespec))
     ;; (if (logbitp 5 byte)
     ;;     (progn ;; var
