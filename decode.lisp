@@ -40,7 +40,8 @@ returns them as a list."
                 ((small-constant variable) (prog1 (byte-at (+ ptr offset)) (incf offset 1)))
                 (large-constant (prog1 (word-at (+ ptr offset)) (incf offset 2))))))
 
-(defun decode-store-variable (ptr))
+(defun decode-store-variable (ptr)
+  (byte-at ptr))
 
 (defun decode-branch (ptr)
   "Some instructions require a jump (or branch) to be made to another
