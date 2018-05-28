@@ -80,7 +80,7 @@ sequence of arguments."
     (case offset
       (0 'rfalse)
       (1 'rtrue)
-      (otherwise 'branch (+ ptr (if long-address 1 2)
+      (otherwise 'branch (+ ptr (if long-address 2 1)
                             offset -2)))))
 
 (defun decode-text (ptr))
