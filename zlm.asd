@@ -9,6 +9,6 @@
   :components ((:file "package")
                (:file "utils")
                (:file "zscii")
-               (:file "decode")
                (:file "opcodes")
+               (:file "cpu")
                (:file "zlm")))
