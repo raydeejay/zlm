@@ -214,6 +214,15 @@ that they do not have a type byte, but instead a type word."
 
 ;; they always get passed
 
+(defun instruction-length (opcode typespec)
+  ;; if varargs, it takes an additional byte
+  ;; it double-vargars, it takes an additional two bytes
+  ;; derive the amount of space consumed by arguments from the typespec
+  ;;   storing opcodes take an additional byte
+  ;;   branching opcodes take an additional 1 or 2 bytes
+  ;;   string opcodes take an undetermined amount of additional bytes
+  )
+
 (defun decode (ptr)
   (let ((byte (byte-at ptr)))
     ;; opcode 0 nop?
@@ -229,15 +238,11 @@ that they do not have a type byte, but instead a type word."
             ;; opcodes 1-127 2op
             (decode-long-opcode ptr)))
 
-    ;; read operands?
+    ;; read additional operands here (store/branch/string)
+
+    ;; return two values: full list with the instruction, and actual
+    ;; number of bytes to skip forward
     ))
-
-
-;; types are needed when decoding only because we need to know how may
-;; bytes to read
-
-;; the decode- functions should take a memory address, so they can do further reads
-;; they should return how many bytes they read
 
 ;;; TOOLS
 (defun dis* (ptr)
