@@ -2,6 +2,50 @@
 
 (in-package #:zlm)
 
+;;; OPCODE METADATA
+
+;; In order to read result/branch/string values when needed, metadata
+;; about each opcode must be stored somehow, since it cannot be
+;; derived from the bit pattern
+
+;; This "metadata" is valid for V3.
+(defparameter *branching-opcodes*
+  (let ((2ops '(1 2 3 4 5 6 7 10))
+        (1ops '(128 129 130))
+        (0ops '(181 182 189)))
+    (append 2ops
+            (mapcar (lambda (x) (+ 32 x)) 2ops)
+            (mapcar (lambda (x) (+ 64 x)) 2ops)
+            (mapcar (lambda (x) (+ 96 x)) 2ops)
+            1ops
+            (mapcar (lambda (x) (+ 16 x)) 1ops)
+            0ops
+            (mapcar (lambda (x) (+ 16 x)) 0ops)))
+  "Opcode numbers 32 to 127: other forms of 2OP with different types.
+Opcode numbers 144 to 175: other forms of 1OP with different types.
+Opcode numbers 192 to 223: VAR forms of 2OP:0 to 2OP:31.")
+
+(defun branchingp (opcode)
+  (member opcode *branching-opcodes*))
+
+(defparameter *storing-opcodes*
+  (let ((2ops '(8 9 15 16 17 18 19 20 21 22 23 24))
+        (1ops '(129 130 131 132 142 143)))
+    (append 2ops
+            (mapcar (lambda (x) (+ 32 x)) 2ops)
+            (mapcar (lambda (x) (+ 64 x)) 2ops)
+            (mapcar (lambda (x) (+ 96 x)) 2ops)
+            1ops
+            (mapcar (lambda (x) (+ 16 x)) 1ops)))
+  "Opcode numbers 32 to 127: other forms of 2OP with different types.
+Opcode numbers 144 to 175: other forms of 1OP with different types.
+Opcode numbers 192 to 223: VAR forms of 2OP:0 to 2OP:31.")
+
+(defun storingp (opcode)
+  (member opcode *storing-opcodes*))
+
+
+;;; TYPESPECS
 (defun 1bit-typespec (byte)
   "Decode the operand types for a 2OP long opcode, and return them as
 a list."
@@ -33,6 +77,8 @@ returns them as a list."
                 (#b01 'small-constant)
                 (#b10 'variable))))
 
+
+;;; OPERANDS
 (defun decode-operands (ptr typespec)
   (loop :with offset := 0
      :for type :in typespec
@@ -86,6 +132,7 @@ sequence of arguments."
 (defun decode-text (ptr))
 
 
+;;; OPCODES
 (defun decode-long-opcode (ptr)
   "The first byte of a long instruction is of the form %0abxxxxx.
 Here, %xxxxx is the 2OP opcode number, and %a and %b are abbreviated
@@ -156,6 +203,9 @@ that they do not have a type byte, but instead a type word."
     (if (member byte '(#xEC #xFA))
         (decode-double-vargars-opcode ptr)
         (decode-vargars-opcode ptr))))
+
+
+;;; DECODING
 
 ;; the decode-* instructions return the opcode, and each of the
 ;; arguments, as multiple values
