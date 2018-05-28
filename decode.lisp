@@ -42,7 +42,45 @@ returns them as a list."
 
 (defun decode-store-variable (ptr))
 
-(defun decode-branch-offset (type ptr))
+(defun decode-branch (ptr)
+  "Some instructions require a jump (or branch) to be made to another
+part of the Z-program, depending on the outcome of some test.  These
+instructions are followed by one or two bytes called a branch
+argument.
+
+Bit 7 of the first byte indicates when a branch occurs, a %0 meaning
+that the branch logic is ‘reversed’: branch if the instruction doesn’t
+want to, don’t if it does.
+
+If bit 6 is %1, the branch argument consists of a single byte and the
+branch offset is given by its bottom 6 bits (unsigned, i.e., from 0 to
+63).
+
+If bit 6 is %0, the branch argument consists of two bytes, and the
+branch offset is given by the bottom 6 bits of the first byte followed
+by all bits of the second (signed, i.e., from −8192 to 8191).
+
+The following happens when a branch is to be made.  If the branch
+offset is 0 or 1, then instead of branching the instruction rfalse or
+rtrue, respectively, is carried out.  Otherwise, the branch is made by
+setting the PC to
+
+  Address after branch argument + Branch offset −2.
+
+Note that a branch argument, if present, is always the last of a
+sequence of arguments."
+  (let* ((byte (byte-at ptr))
+         (reversed (logbitp 7 byte))
+         (long-address (logbitp 6 byte))
+         (byte-offset (logand #b00111111 byte))
+         (offset (if long-address
+                     byte-offset
+                     '(make-signed (+ (shl byte-offset 8 8) (byte-at (1+ ptr)))))))
+    (case offset
+      (0 'rfalse)
+      (1 'rtrue)
+      (otherwise 'branch (+ ptr (if long-address 1 2)
+                            offset -2)))))
 
 (defun decode-text (ptr))
 
@@ -92,15 +130,7 @@ non-%11 pair."
   (let* ((byte (byte-at ptr))
          (opcode (logand #b00011111 byte))
          (typespec (varargs-typespec (byte-at (1+ ptr)))))
-    `(,byte ,@(decode-operands (+ 2 ptr) typespec))
-    ;; (if (logbitp 5 byte)
-    ;;     (progn ;; var
-    ;;       (list byte 'varargs))
-    ;;     (progn ;; 2op
-    ;;       (if (= opcode 1)
-    ;;           (list byte 'one-arg)
-    ;;           (list byte 'two-args))))
-    ))
+    `(,byte ,@(decode-operands (+ 2 ptr) typespec))))
 
 ;; NOTE: These are not valid opcodes in V3
 (defun decode-double-vargars-opcode (ptr)
@@ -147,7 +177,7 @@ that they do not have a type byte, but instead a type word."
                 (decode-short-opcode ptr))
             ;; opcodes 1-127 2op
             (decode-long-opcode ptr)))
-    
+
     ;; read operands?
     ))
 
