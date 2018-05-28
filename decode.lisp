@@ -71,7 +71,7 @@ operand is present, it follows the first byte."
   (let* ((byte (byte-at ptr))
          (typespec (2bit-typespec byte))
          (opcode (logand #b00001111 byte)))
-    (list byte (decode-operands (1+ ptr) typespec))))
+    `(,byte ,@(decode-operands (1+ ptr) typespec))))
 
 (defun decode-vargars-opcode (ptr)
   "The first byte of a variable instruction is of the form
