@@ -230,10 +230,10 @@ that they do not have a type byte, but instead a type word."
         (list '0)
         (if (logbitp 7 byte)
             (if (logbitp 6 byte)
-                ;; opcodes 224-255 varop
+                ;; opcodes 192-255 varop
                 (decode-vargars-opcode* ptr)
                 ;; opcodes 128-175 1op
-                ;; opcodes 176-223 0op
+                ;; opcodes 176-191 0op
                 (decode-short-opcode ptr))
             ;; opcodes 1-127 2op
             (decode-long-opcode ptr)))
