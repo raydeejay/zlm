@@ -239,6 +239,6 @@ that they do not have a type byte, but instead a type word."
 ;; the decode- functions should take a memory address, so they can do further reads
 ;; they should return how many bytes they read
 
-;; so DECODE calls the relevant decode-* function, passing PTR, and
-;; they will determine which types are to be read, and call the
-;; relevant functions to read them
+;;; TOOLS
+(defun dis* (ptr)
+  (format nil "~{~4,'0X~^ ~}" (decode ptr)))
