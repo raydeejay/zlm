@@ -29,9 +29,9 @@ returns them as a list."
      :until (= bits #b11)
      :collect (ecase bits
                 ;; ((#b11) 'absent)
-                ((#b00) 'large-constant)
-                ((#b01) 'small-constant)
-                ((#b10) 'variable))))
+                (#b00 'large-constant)
+                (#b01 'small-constant)
+                (#b10 'variable))))
 
 (defun decode-operands (ptr typespec)
   (loop :with offset := 0
