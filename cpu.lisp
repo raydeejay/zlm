@@ -117,10 +117,10 @@ setting the PC to
 Note that a branch argument, if present, is always the last of a
 sequence of arguments."
   (let* ((byte (byte-at ptr))
-         (reversed (logbitp 7 byte))
-         (long-address (logbitp 6 byte))
+         (reversed (not (logbitp 7 byte))) ;; TODO consider this here or what?
+         (short-address (logbitp 6 byte))
          (byte-offset (logand #b00111111 byte))
-         (offset (if long-address
+         (offset (if short-address
                      byte-offset
                      '(make-signed (+ (shl byte-offset 8 8) (byte-at (1+ ptr)))))))
     (case offset
