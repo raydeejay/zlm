@@ -87,7 +87,7 @@ returns them as a list."
                 (large-constant (prog1 (word-at (+ ptr offset)) (incf offset 2))))))
 
 (defun decode-store-variable (ptr)
-  (byte-at ptr))
+  (values (byte-at ptr) 1))
 
 (defun decode-branch (ptr)
   "Some instructions require a jump (or branch) to be made to another
@@ -124,10 +124,10 @@ sequence of arguments."
                      byte-offset
                      '(make-signed (+ (shl byte-offset 8 8) (byte-at (1+ ptr)))))))
     (case offset
-      (0 'rfalse)
-      (1 'rtrue)
-      (otherwise 'branch (+ ptr (if long-address 2 1)
-                            offset -2)))))
+      (0 (values 0 1))
+      (1 (values 1 1))
+      (otherwise (let ((offset-bytes (if short-address 1 2)))
+                   (values (+ ptr offset-bytes offset -2) offset-bytes))))))
 
 (defun decode-text (ptr))
 
@@ -147,7 +147,8 @@ bytes of the instruction contain the operands, first %a, then %b.
   (let* ((byte (byte-at ptr))
          (typespec (1bit-typespec byte))
          (opcode (logand #b00011111 byte)))
-    `(,byte ,@(decode-operands (1+ ptr) typespec))))
+    (values `(,byte ,@(decode-operands (1+ ptr) typespec))
+            3)))
 
 (defun decode-short-opcode (ptr)
   "The first byte of a short instruction is of the form %10ttxxxx.
@@ -157,7 +158,8 @@ operand is present, it follows the first byte."
   (let* ((byte (byte-at ptr))
          (typespec (2bit-typespec byte))
          (opcode (logand #b00001111 byte)))
-    `(,byte ,@(decode-operands (1+ ptr) typespec))))
+    (values `(,byte ,@(decode-operands (1+ ptr) typespec))
+            2))) ;; or 3....
 
 (defun decode-vargars-opcode (ptr)
   "The first byte of a variable instruction is of the form
@@ -226,24 +228,52 @@ that they do not have a type byte, but instead a type word."
 (defun decode (ptr)
   (let ((byte (byte-at ptr)))
     ;; opcode 0 nop?
-    (if (zerop byte)
-        (list '0)
-        (if (logbitp 7 byte)
-            (if (logbitp 6 byte)
-                ;; opcodes 192-255 varop
-                (decode-vargars-opcode* ptr)
-                ;; opcodes 128-175 1op
-                ;; opcodes 176-191 0op
-                (decode-short-opcode ptr))
-            ;; opcodes 1-127 2op
-            (decode-long-opcode ptr)))
-
-    ;; read additional operands here (store/branch/string)
-
-    ;; return two values: full list with the instruction, and actual
-    ;; number of bytes to skip forward
-    ))
+    (multiple-value-bind (instr instr-length)
+        (if (zerop byte)
+            (list '0)
+            (if (logbitp 7 byte)
+                (if (logbitp 6 byte)
+                    ;; opcodes 192-255 varop
+                    (decode-vargars-opcode* ptr)
+                    ;; opcodes 128-175 1op
+                    ;; opcodes 176-191 0op
+                    (decode-short-opcode ptr))
+                ;; opcodes 1-127 2op
+                (decode-long-opcode ptr)))
+      (when (storingp (car instr))
+        (nconc instr (list (decode-store-variable (+ ptr instr-length))))
+        (incf instr-length 1))
+      (when (branchingp (car instr))
+        (multiple-value-bind (offset bytes) (decode-branch (+ ptr instr-length))
+          (nconc instr (list offset))
+          (incf instr-length bytes)))
+      (values instr instr-length))))
 
 ;;; TOOLS
 (defun dis* (ptr)
-  (format nil "~{~4,'0X~^ ~}" (decode ptr)))
+  (multiple-value-bind (instr instr-length) (decode ptr)
+    (when (storingp (car instr))
+      (nconc instr (list (decode-store-variable (+ ptr instr-length))))
+      (incf instr-length 1))
+    (when (branchingp (car instr))
+      (multiple-value-bind (offset bytes) (decode-branch (+ ptr instr-length))
+        (nconc instr (list offset))
+        (incf instr-length bytes)))
+    (values (format nil "~{~4,'0X~^ ~}" instr)
+            instr-length)))
+
+;;; OPERATION
+(defun write-capabilities ()
+  )
+
+(defun init ()
+  '(init-video)
+  '(init-sound)
+  '(load-program)
+  ;; On restart only, the current value of the ‘printer transcript
+  ;; bit’ (header bit $10-$11/0) is remembered
+  (setf *stack* (list (list (header 'initial-pc ))))
+  ())
+
+(defun execute ()
+  )
